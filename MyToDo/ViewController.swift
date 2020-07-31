@@ -17,13 +17,49 @@ class ViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-//        table.delegate = self
-//        table.dataSource = self
+        table.delegate = self
+        table.dataSource = self
     }
     
     
     @IBAction func didTapAdd() {
         //show add VC
+        guard let vc = storyboard?.instantiateViewController(identifier: "add") as? AddViewController else {return
+            
+        }
+        
+        vc.title = "New Reminder"
+        vc.navigationItem.largeTitleDisplayMode = .never
+        vc.completion = {title, body, date in
+            DispatchQueue.main.async {
+                self.navigationController?.popViewController(animated: true)
+                let new = MyReminder(title: title, date: date, identifier: "id_\(title)")
+                self.models.append(new)
+                self.table.reloadData()
+                
+                
+                let content = UNMutableNotificationContent()
+                       content.title = title
+                       content.sound = .default
+                       content.body = body
+                       let targetDate = date
+                       
+                       let trigger = UNCalendarNotificationTrigger(dateMatching: Calendar.current.dateComponents([.year, .month,.day, .hour,.minute,.second], from: targetDate), repeats: false)
+                       
+                       let request = UNNotificationRequest(identifier: "some_long_id", content: content, trigger: trigger)
+                       
+                       UNUserNotificationCenter.current().add(request, withCompletionHandler: {error in
+                           if let error = error {
+                               print("\(error.localizedDescription)")
+                           }
+                       })
+                
+            }
+        }
+        navigationController?.pushViewController(vc, animated: true)
+        
+        
+    
     }
     
     @IBAction func didTapTest() {
@@ -80,6 +116,10 @@ extension ViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath)
         cell.textLabel?.text = models[indexPath.row].title
+        let date = models[indexPath.row].date
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM, dd, yyyy at hh:mm a"
+        cell.detailTextLabel?.text = formatter.string(from: date)
         return cell
     }
     
